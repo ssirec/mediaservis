@@ -97,31 +97,61 @@ export default defineConfig({
   },
 
   vite: {
-    plugins: [
-      tailwindcss(),
-      // The following are workarounds for issues with the Cloudflare adapter and its on-demand SSR runtime (workerd).
-      // See https://docs.astro.build/en/guides/integrations-guide/cloudflare/#some-dependencies-might-need-to-be-pre-compiled for details.
-      //
-      // Custom Plugin: Neutralize `createRequire(import.meta.url)` in fdir (used by astro/loaders -> tinyglobby -> picomatch) to avoid "The argument 'path' ... Received 'undefined'" errors in workerd.
-      {
-        name: 'neutralize-create-require-for-workerd',
-        enforce: 'post',
-        apply: 'build',
-        renderChunk(code) {
-          if (!code.includes('createRequire(import.meta.url)')) return null;
-          return {
-            code: code.replaceAll('createRequire(import.meta.url)', '() => ({ resolve: () => { throw new Error("no require"); }, })'),
-            map: null,
-          };
+      plugins: [
+        tailwindcss(),
+        // The following are workarounds for issues with the Cloudflare adapter and its on-demand SSR runtime (workerd).
+        // See https://docs.astro.build/en/guides/integrations-guide/cloudflare/#some-dependencies-might-need-to-be-pre-compiled for details.
+        //
+        // Custom Plugin: Neutralize `createRequire(import.meta.url)` in fdir (used by astro/loaders -> tinyglobby -> picomatch) to avoid "The argument 'path' ... Received 'undefined'" errors in workerd.
+        {
+          name: 'neutralize-create-require-for-workerd',
+          enforce: 'post',
+          apply: 'build',
+          renderChunk(code) {
+            if (!code.includes('createRequire(import.meta.url)')) return null;
+            return {
+              code: code.replaceAll('createRequire(import.meta.url)', '() => ({ resolve: () => { throw new Error("no require"); }, })'),
+              map: null,
+            };
+          },
+        },
+        // Custom Plugin: Patch util.deprecate in expressive-code bundles for debug package compatibility
+        {
+          name: 'patch-util-deprecate-in-bundles',
+          enforce: 'post',
+          apply: 'build',
+          renderChunk(code, chunk) {
+            // Only patch expressive-code related chunks that contain the debug package
+            if (chunk.fileName.includes('dist_') && code.includes('util.deprecate')) {
+              return {
+                code: code.replace(/require\(['"]util['"]\)\.deprecate/g, '(fn, msg) => fn'),
+                map: null,
+              };
+            }
+            return null;
+          },
+        },
+      ],
+      // Pre-compilation of dependencies that are not compatible with the Cloudflare workerd runtime (on-demand SSR) or that are ESM-only and not pre-bundled by Vite.
+      optimizeDeps: {
+        include: ['reading-time', 'fdir > picomatch'],
+        exclude: ['astro/assets/services/noop', 'debug', 'ms', 'expressive-code > postcss', 'util'],
+      },
+      resolve: {
+        alias: {
+          debug: 'debug/src/browser.js',
+          ms: 'ms/index.js',
         },
       },
-    ],
-    // Pre-compilation of dependencies that are not compatible with the Cloudflare workerd runtime (on-demand SSR) or that are ESM-only and not pre-bundled by Vite.
-    optimizeDeps: {
-      include: ['debug', 'ms', 'reading-time', 'fdir > picomatch', 'expressive-code > postcss'],
-      exclude: ['astro/assets/services/noop'],
+      // Externalize util to use Node.js built-in during prerendering
+      ssr: {
+        external: ['util'],
+      },
+      // Polyfill util.deprecate for debug package compatibility in SSR build
+      define: {
+        'util.deprecate': '(fn, msg) => fn',
+      },
     },
-  },
 
   markdown: {
     processor: unified({
