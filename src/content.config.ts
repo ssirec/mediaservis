@@ -50,8 +50,6 @@ const articles = defineCollection({
     }),
 });
 
-
-
 const faq_answers = defineCollection({
   loader: glob({ pattern: ['**/[^_]**.md'], base: './src/content/faq-answers', deferRender: onDemandCollections.has('faq_answers') }),
   schema: () =>

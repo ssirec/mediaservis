@@ -124,8 +124,6 @@ export const themeConfig: ThemeConfig = {
   // for the purpose of this demo, we render intergration options on-demand instead of prerendering them.
   onDemandRenderedCollections: ['integration_options'],
 
-
-
   // LLM and coding assistant settings
   llms: {
     autoGeneration: true,

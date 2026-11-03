@@ -1,4 +1,3 @@
-import { defineEcConfig } from 'astro-expressive-code';
 import { pluginLineNumbers } from '@expressive-code/plugin-line-numbers';
 import { expressiveCodeThemes } from './expressive-code-themes.mjs';
 
@@ -11,9 +10,9 @@ import { expressiveCodeThemes } from './expressive-code-themes.mjs';
 // functions and therefore not JSON-serializable, which breaks that mechanism.
 // Moving them here lets both the Markdown integration and the `<Code>` component
 // pick up the exact same configuration.
-export default defineEcConfig({
+export default {
   themes: [expressiveCodeThemes.light, expressiveCodeThemes.dark],
   useDarkModeMediaQuery: false,
   plugins: [pluginLineNumbers()],
   defaultProps: { showLineNumbers: false },
-});
+};
