@@ -1,0 +1,40 @@
+---
+title: Documentation
+description: Documentation for Astro Stardrive
+---
+import { renderDocs } from '../utils/on-demand-render'
+
+export const prerender = true
+
+// Dynamic docs pages based on content collections
+const docsPages = [
+  'getting-started',
+  'features',
+  'deployment',
+  'integration',
+  'faq',
+]
+
+export async function getStaticPaths() {
+  return docsPages.map((page) => ({
+    params: { page },
+    props: { page },
+  }))
+}
+
+export async function generateStaticParams() {
+  return docsPages.map((page) => ({ page }))
+}
+
+const { t } = useI18n()
+
+export default function DocsPage({ page }) {
+  const docsContent = await getDocContent(page)
+  
+  return (
+    <article className="prose max-w-prose">
+      <h1>{t(`docs.${page}.title`)}</h1>
+      <div dangerSetInnerHTML={docsContent} />
+    </article>
+  )
+}
